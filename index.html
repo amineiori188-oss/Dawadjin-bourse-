@@ -2,15 +2,17 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
     <title>بورصة الدواجن - النظام الرقمي</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Cairo:wght@400;700&family=Almarai:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
         ::-webkit-scrollbar { display: none; }
-        * { scrollbar-width: none; box-sizing: border-box; touch-action: pan-y; }
+        * { scrollbar-width: none; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         :root { 
             --bg-color: #0f172a; --card-bg: #1e293b; --border: #334155;
@@ -27,41 +29,17 @@
             --primary: #ea580c; --shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
-        body { 
-            font-family: var(--font-family); 
-            background-color: #050505; 
-            margin: 0; padding: 0; 
-            display: flex; justify-content: center; align-items: center;
-            height: 100vh; overflow: hidden;
-            -webkit-user-select: none; user-select: none;
+        html, body { 
+            font-family: var(--font-family); background-color: var(--bg-color); 
+            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; 
+            -webkit-user-select: none; user-select: none; touch-action: manipulation;
         }
 
         #app-wrapper {
-            background-color: var(--bg-color); 
-            color: var(--text-main);
-            position: relative;
-            overflow-y: auto; overflow-x: hidden;
-            transition: background-color 0.3s, color 0.3s;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        @media (min-aspect-ratio: 9/16) {
-            #app-wrapper {
-                width: calc(100vh * (9 / 16));
-                height: 100vh;
-                border-left: 1px solid #222;
-                border-right: 1px solid #222;
-                box-shadow: 0 0 30px rgba(0,0,0,0.8);
-            }
-        }
-
-        @media (max-aspect-ratio: 9/16) {
-            #app-wrapper {
-                width: 100vw;
-                height: calc(100vw * (16 / 9));
-                box-shadow: 0 0 30px rgba(0,0,0,0.8);
-            }
+            background-color: var(--bg-color); color: var(--text-main);
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+            overflow-y: auto; overflow-x: hidden; width: 100%; height: 100%;
+            -webkit-overflow-scrolling: touch;
         }
 
         svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
@@ -74,7 +52,7 @@
             display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary);
         }
         .header-title { font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 8px;}
-        .header-btn { background: transparent; border: none; color: var(--primary); cursor: pointer; padding: 5px; touch-action: manipulation; }
+        .header-btn { background: transparent; border: none; color: var(--primary); cursor: pointer; padding: 5px; }
 
         .news-ticker { background: rgba(245, 158, 11, 0.05); border-bottom: 1px solid var(--primary); display: flex; align-items: center; padding: 6px 10px; color: var(--primary); font-size: 13px; font-weight: bold; transition: 0.3s;}
         .ticker-label { background: var(--primary); color: #111; padding: 3px 6px; border-radius: 4px; margin-left: 8px; display: flex; align-items: center; font-size: 11px; white-space: nowrap; font-weight: bold;}
@@ -82,17 +60,11 @@
         .urgent-flash .ticker-label { background: var(--danger); color: white; }
         @keyframes flashRed { 0% {background: rgba(239, 68, 68, 0.1);} 50% {background: rgba(239, 68, 68, 0.3);} 100% {background: rgba(239, 68, 68, 0.1);} }
 
-        .gemini-card { 
-            background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(59, 130, 246, 0.08)); 
-            border: 1px solid rgba(168, 85, 247, 0.2); border-radius: var(--radius); padding: 12px; 
-            margin-bottom: 15px; display: flex; gap: 10px; align-items: flex-start; cursor: pointer;
-            transition: transform 0.1s ease;
-        }
+        .gemini-card { background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(59, 130, 246, 0.08)); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: var(--radius); padding: 12px; margin-bottom: 15px; display: flex; gap: 10px; align-items: flex-start; cursor: pointer; transition: transform 0.1s ease; }
         .gemini-card:active { transform: scale(0.98); background: linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(59, 130, 246, 0.12)); }
         .gemini-icon { background: linear-gradient(135deg, var(--gemini), var(--info)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 24px; margin-top: 2px;}
 
         .container { padding: 12px; max-width: 100%; margin: auto; padding-bottom: 40px;}
-        
         .page { display: none; } .active-page { display: block; animation: fade 0.2s ease-out; }
         @keyframes fade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -115,8 +87,8 @@
         .feed-details-box { width: 100%; text-align: right; margin-top: 8px; font-size: 11px; color: var(--text-gray); background: var(--bg-color); border-radius: 6px; padding: 6px; box-sizing: border-box;}
         .feed-details-box div { display: flex; justify-content: space-between; margin-bottom: 2px; border-bottom: 1px solid var(--border); padding-bottom: 2px;}
 
-        .btn { padding: 12px; background-color: var(--primary); color: #fff; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 14px; font-family: inherit; display: flex; justify-content: center; align-items: center; gap: 6px; transition: 0.1s; touch-action: manipulation;}
-        .btn:active { transform: scale(0.98); opacity: 0.9; }
+        .btn { padding: 12px; background-color: var(--primary); color: #fff; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 14px; font-family: inherit; display: flex; justify-content: center; align-items: center; gap: 6px; transition: 0.1s;}
+        .btn:active { transform: scale(0.98); }
         .btn-back { background-color: var(--card-bg); color: var(--text-main); border: 1px solid var(--border); margin-bottom: 15px; }
         .btn-action { background-color: var(--info); color: white;}
         .btn-outline { background: transparent; border: 2px dashed var(--success); color: var(--success); }
@@ -126,12 +98,12 @@
         .form-group input:focus { border-color: var(--primary); }
         input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
 
-        .table-container { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+        .table-container { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); width: 100%;}
         table { width: 100%; border-collapse: collapse; background: var(--card-bg); font-size: 12px;}
         th, td { padding: 10px 6px; text-align: center; border-bottom: 1px solid var(--border); color: var(--text-main); white-space: nowrap;}
         th { background-color: var(--bg-color); color: var(--text-gray); font-weight: bold;}
         .action-btns { display: flex; gap: 4px; justify-content: center;}
-        .icon-btn { background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; touch-action: manipulation;}
+        .icon-btn { background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px;}
         .edit-btn { color: var(--info); background: rgba(59, 130, 246, 0.1); }
         .delete-btn { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
 
@@ -142,18 +114,10 @@
         .chart-container { width: 100%; height: 220px; margin-top: 10px; }
 
         #custom-modal { display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); backdrop-filter: blur(2px); z-index:9999; align-items:center; justify-content:center; }
-        .modal-content { background:var(--card-bg); padding:20px; border-radius:12px; width:85%; max-width:340px; text-align:center; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.4);}
+        .modal-content { background:var(--card-bg); padding:20px; border-radius:12px; width:85%; max-width:320px; text-align:center; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.4);}
         .modal-content h3 { margin-top: 0; color: var(--text-main); font-size: 16px;}
-        .modal-content p { font-size: 12px; margin-bottom: 10px; line-height: 1.5; color: var(--text-gray); }
-        .modal-content input, .modal-content select, .modal-content textarea { width:100%; padding:10px; margin:12px 0; background:var(--bg-color); color:var(--text-main); border:1px solid var(--border); border-radius:8px; box-sizing: border-box; font-family: inherit; font-size: 13px; -webkit-user-select: text; user-select: text;}
-        .modal-content textarea { height: 100px; resize: none; direction: ltr; }
-
-        /* نظام الإشعارات المنبثقة (Toast) */
-        #toast-container { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
-        .toast { background: var(--success); color: white; padding: 10px 20px; border-radius: 30px; font-size: 12px; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: slideUp 0.3s ease, fadeOut 0.3s ease 2.5s forwards; display: flex; align-items: center; gap: 8px; }
-        .toast.error { background: var(--danger); }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        .modal-content p { font-size: 12px; margin-bottom: 10px; }
+        .modal-content input, .modal-content select { width:100%; padding:10px; margin:12px 0; background:var(--bg-color); color:var(--text-main); border:1px solid var(--border); border-radius:8px; box-sizing: border-box; font-family: inherit; font-size: 13px; -webkit-user-select: text; user-select: text;}
 
         @media print {
             body * { visibility: hidden; }
@@ -170,65 +134,44 @@
 <div id="app-wrapper">
     <header>
         <div style="width: 24px;"></div> 
-        <div class="header-title">
-            <svg viewBox="0 0 24 24"><path d="M12 2c-3.3 0-6 2.7-6 6v4c0 3.3 2.7 6 6 6s6-2.7 6-6V8c0-3.3-2.7-6-6-6z"/><path d="M12 22v-4"/></svg>
-            بورصة الدواجن
-        </div>
-        <button class="header-btn" onclick="exitAppConfirmation()" style="color: var(--danger);">
-            <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
-        </button>
+        <div class="header-title"><svg viewBox="0 0 24 24"><path d="M12 2c-3.3 0-6 2.7-6 6v4c0 3.3 2.7 6 6 6s6-2.7 6-6V8c0-3.3-2.7-6-6-6z"/><path d="M12 22v-4"/></svg> بورصة الدواجن</div>
+        <button class="header-btn" onclick="exitAppConfirmation()" style="color: var(--danger);"><svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></button>
     </header>
 
     <div class="news-ticker" id="news-ticker">
         <div class="ticker-label" id="ticker-label"><svg viewBox="0 0 24 24" style="width:10px; height:10px; margin-left:4px;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> مباشر</div>
-        <marquee id="live-news-text" direction="right" scrollamount="4">جاري تحميل الأسعار...</marquee>
+        <marquee id="live-news-text" direction="right" scrollamount="4">جاري التحميل من البورصة...</marquee>
     </div>
 
     <div class="container">
-        
         <div id="main-list-page" class="page active-page">
             <div class="gemini-card" onclick="updateTip()">
                 <div class="gemini-icon">✦</div>
-                <div style="flex: 1;">
+                <div style="flex: 1; min-width: 0;">
                     <h4 style="margin:0; color:var(--gemini); font-size:13px; font-weight:800; display: flex; justify-content: space-between; align-items: center;">
-                        النصائح والتعليمات
-                        <span style="font-size: 10px; color: var(--text-gray); font-weight: normal;">(المس للتغيير)</span>
+                        النصائح والتعليمات <span style="font-size: 10px; color: var(--text-gray); font-weight: normal;">(المس للتغيير)</span>
                     </h4>
-                    <p id="gemini-tip-text" style="margin:4px 0 0; font-size:12px; color:var(--text-main); line-height:1.5;"></p>
+                    <p id="gemini-tip-text" style="margin:4px 0 0; font-size:13px; color:var(--text-main); line-height:1.6; white-space: normal; word-wrap: break-word; overflow-wrap: break-word;"></p>
                 </div>
             </div>
 
-            <button class="btn btn-outline" style="margin-bottom: 15px;" onclick="promptNewCycle()">
-                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> إضافة مزرعة / دورة جديدة
-            </button>
-            
+            <button class="btn btn-outline" style="margin-bottom: 15px;" onclick="promptNewCycle()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> إضافة مزرعة / دورة جديدة</button>
             <h3 style="color: var(--text-gray); border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 10px; font-size:13px;">المزارع النشطة حالياً:</h3>
             <div id="active-cycles-container" style="margin-bottom: 20px;"></div>
 
             <h3 style="color: var(--text-gray); border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 10px; font-size:13px;">إدارة التطبيق:</h3>
             <div class="grid">
                 <div class="card" onclick="openArchive()" style="border-color: var(--text-gray); background: transparent;">
-                    <div class="icon-circle" style="background: transparent; border:none; color: var(--text-gray);">
-                        <svg class="icon-lg" viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-                    </div>
+                    <div class="icon-circle" style="background: transparent; border:none; color: var(--text-gray);"><svg class="icon-lg" viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div>
                     <h3 style="color: var(--text-gray); margin-top: 5px;">الأرشيف</h3>
                 </div>
-                
                 <div class="card" onclick="openSettingsPage()" style="border-color: var(--info); background: rgba(59, 130, 246, 0.05);">
-                    <div class="icon-circle" style="background: transparent; border:none; color: var(--info);">
-                        <svg class="icon-lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                    </div>
-                    <h3 style="color: var(--info); margin-top: 5px;">الإعدادات والنسخ</h3>
+                    <div class="icon-circle" style="background: transparent; border:none; color: var(--info);"><svg class="icon-lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+                    <h3 style="color: var(--info); margin-top: 5px;">الإعدادات</h3>
                 </div>
-
                 <div class="card full-card" onclick="window.open('https://www.facebook.com/amine.iori.37?mibextid=ZbWKwL', '_blank');" style="border-color: #1877f2; background: rgba(24, 119, 242, 0.05); flex-direction: row; justify-content: flex-start; gap: 12px; padding: 12px;">
-                    <div class="icon-circle" style="background: transparent; border:none; color: #1877f2;">
-                        <svg class="icon-lg" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-                    </div>
-                    <div style="text-align: right; flex: 1;">
-                        <h3 style="margin:0; color: #1877f2; font-size:14px;">تواصل مع المطور</h3>
-                        <div style="color: var(--text-gray); font-size:11px;">صفحة عبوش فيسبوك</div>
-                    </div>
+                    <div class="icon-circle" style="background: transparent; border:none; color: #1877f2;"><svg class="icon-lg" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></div>
+                    <div style="text-align: right; flex: 1;"><h3 style="margin:0; color: #1877f2; font-size:14px;">تواصل مع المطور</h3><div style="color: var(--text-gray); font-size:11px;">صفحة عبوش فيسبوك</div></div>
                 </div>
             </div>
         </div>
@@ -236,76 +179,31 @@
         <div id="dashboard-page" class="page">
             <button class="btn btn-back" onclick="navigateBack()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> رجوع</button>
             <div class="cycle-header">
-                <h2 id="current-cycle-name" style="font-size: 16px;"><span></span></h2>
+                <h2 id="current-cycle-name" style="font-size: 16px;"><span>اسم الدورة</span><span class="edit-icon icon-sm" onclick="editCycleName()"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span></h2>
                 <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; background:var(--bg-color); padding:8px; border-radius:6px; border:1px solid var(--border);">
                     <span style="font-size: 12px; color: var(--text-gray);">تاريخ الإدخال:</span>
                     <input type="date" id="startDate" onchange="updateDashboard()" style="background:transparent; color:var(--text-main); border:none; outline:none; font-family:inherit; font-size: 13px;">
                 </div>
             </div>
-
             <div class="grid" style="margin-bottom: 12px;">
-                <div class="card" style="background: rgba(59, 130, 246, 0.1); border-color: var(--info);">
-                    <h3 style="color:var(--info); margin-top:0;">عمر القطيع</h3>
-                    <div class="value" id="dash-age" style="font-size:18px; color:var(--text-main);">0 يوم</div>
-                </div>
-                <div class="card" style="background: rgba(16, 185, 129, 0.1); border-color: var(--success);">
-                    <h3 style="color:var(--success); margin-top:0;">القطيع المتبقي</h3>
-                    <div class="value" id="dash-remaining" style="font-size:18px; color:var(--text-main);">0 طير</div>
-                </div>
+                <div class="card" style="background: rgba(59, 130, 246, 0.1); border-color: var(--info);"><h3 style="color:var(--info); margin-top:0;">عمر القطيع</h3><div class="value" id="dash-age" style="font-size:18px; color:var(--text-main);">0 يوم</div></div>
+                <div class="card" style="background: rgba(16, 185, 129, 0.1); border-color: var(--success);"><h3 style="color:var(--success); margin-top:0;">القطيع المتبقي</h3><div class="value" id="dash-remaining" style="font-size:18px; color:var(--text-main);">0 طير</div></div>
             </div>
-
             <div class="section-title"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> الجداول والإدخالات</div>
             <div class="grid">
-                <div class="card" onclick="openDataEntry('chicks')">
-                    <div class="icon-circle" style="color:#fcd34d;"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
-                    <h3>الكتاكيت</h3><div class="value" id="val-chicks">0 صوص</div>
-                </div>
-                <div class="card" onclick="openDataEntry('feed')">
-                    <div class="icon-circle" style="color:#f59e0b;"><svg viewBox="0 0 24 24"><path d="M20 16V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12"/><polygon points="4 16 20 16 12 22 4 16"/></svg></div>
-                    <h3>العلف</h3>
-                    <div class="feed-details-box">
-                        <div><span>انطلاق:</span> <strong id="feed-dem">0</strong></div>
-                        <div><span>نمـو:</span> <strong id="feed-cro">0</strong></div>
-                        <div><span>نهايـة:</span> <strong id="feed-fin">0</strong></div>
-                    </div>
-                    <div class="value" id="val-feed" style="margin-top:6px; font-size:12px; color:var(--primary);">الإجمالي: 0 قنطار</div>
-                </div>
-                <div class="card" onclick="openDataEntry('mortality')">
-                    <div class="icon-circle" style="color: var(--danger);"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-                    <h3>الوفيات</h3><div class="value" style="color: var(--danger);" id="val-mortality">0 طير</div>
-                </div>
-                <div class="card" onclick="openDataEntry('vet')">
-                    <div class="icon-circle" style="color: var(--info);"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
-                    <h3>بيطري ودواء</h3><div class="value" id="val-vet">0 د.ج</div>
-                </div>
-                <div class="card" onclick="openDataEntry('gas')">
-                    <div class="icon-circle" style="color: #f97316;"><svg viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div>
-                    <h3>تدفئة وغاز</h3><div class="value" id="val-gas">0 د.ج</div>
-                </div>
-                <div class="card" onclick="openDataEntry('bedding')">
-                    <div class="icon-circle" style="color: #a855f7;"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/></svg></div>
-                    <h3>نشارة وفراش</h3><div class="value" id="val-bedding">0 د.ج</div>
-                </div>
-                <div class="card full-card" onclick="openDataEntry('other')" style="flex-direction: row; justify-content: flex-start; gap: 12px; padding: 12px;">
-                    <div class="icon-circle" style="width: 32px; height: 32px; color:#cbd5e1;"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
-                    <div style="text-align: right; flex: 1;"><h3 style="margin:0;">مصاريف أخرى (عمال، نقل..)</h3><div class="value" id="val-other">0 د.ج</div></div>
-                </div>
+                <div class="card" onclick="openDataEntry('chicks')"><div class="icon-circle" style="color:#fcd34d;"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><h3>الكتاكيت</h3><div class="value" id="val-chicks">0 صوص</div></div>
+                <div class="card" onclick="openDataEntry('feed')"><div class="icon-circle" style="color:#f59e0b;"><svg viewBox="0 0 24 24"><path d="M20 16V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12"/><polygon points="4 16 20 16 12 22 4 16"/></svg></div><h3>العلف</h3><div class="feed-details-box"><div><span>انطلاق:</span> <strong id="feed-dem">0</strong></div><div><span>نمـو:</span> <strong id="feed-cro">0</strong></div><div><span>نهايـة:</span> <strong id="feed-fin">0</strong></div></div><div class="value" id="val-feed" style="margin-top:6px; font-size:12px; color:var(--primary);">الإجمالي: 0 قنطار</div></div>
+                <div class="card" onclick="openDataEntry('mortality')"><div class="icon-circle" style="color: var(--danger);"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><h3>الوفيات</h3><div class="value" style="color: var(--danger);" id="val-mortality">0 طير</div></div>
+                <div class="card" onclick="openDataEntry('vet')"><div class="icon-circle" style="color: var(--info);"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><h3>بيطري ودواء</h3><div class="value" id="val-vet">0 د.ج</div></div>
+                <div class="card" onclick="openDataEntry('gas')"><div class="icon-circle" style="color: #f97316;"><svg viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div><h3>تدفئة وغاز</h3><div class="value" id="val-gas">0 د.ج</div></div>
+                <div class="card" onclick="openDataEntry('bedding')"><div class="icon-circle" style="color: #a855f7;"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/></svg></div><h3>نشارة وفراش</h3><div class="value" id="val-bedding">0 د.ج</div></div>
+                <div class="card full-card" onclick="openDataEntry('other')" style="flex-direction: row; justify-content: flex-start; gap: 12px; padding: 12px;"><div class="icon-circle" style="width: 32px; height: 32px; color:#cbd5e1;"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><div style="text-align: right; flex: 1;"><h3 style="margin:0;">مصاريف أخرى (عمال، نقل..)</h3><div class="value" id="val-other">0 د.ج</div></div></div>
             </div>
-
             <div class="section-title"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> التحليل والتقارير</div>
             <div class="grid">
-                <div class="card full-card" onclick="openChartsPage()" style="background: rgba(245, 158, 11, 0.05); border-color: var(--primary); flex-direction: row; justify-content: flex-start; gap: 12px; padding: 12px;">
-                    <div class="icon-circle" style="color: var(--primary); border-color:var(--primary);"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg></div>
-                    <div style="text-align: right; flex: 1;"><h3 style="margin:0; color: var(--primary); font-size:14px;">عرض المنحنيات البيانية</h3><div style="color: var(--text-gray); font-size:11px;">منحنى الوفيات واستهلاك العلف</div></div>
-                </div>
-                <div class="card full-card" onclick="openDataEntry('sales')" style="border-color: var(--success); background: rgba(16, 185, 129, 0.05); flex-direction: row; justify-content: flex-start; gap: 12px; padding: 12px;">
-                    <div class="icon-circle" style="color: var(--success); border-color:var(--success);"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-                    <div style="text-align: right; flex: 1;"><h3 style="margin:0; color: var(--success); font-size:14px;">تسجيل المبيعات</h3><div class="value" id="val-sales" style="color: var(--success); font-size:13px;">0 د.ج</div></div>
-                </div>
-                <div class="card full-card" onclick="showResults()" style="background: rgba(59, 130, 246, 0.05); border-color: var(--info); padding: 12px;">
-                    <div class="icon-circle" style="color: var(--info); border-color:var(--info); margin-bottom: 6px;"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
-                    <h3 style="color: var(--text-main); margin-top:0; font-size:14px;">عرض التقرير الختامي (طباعة ومشاركة)</h3>
-                </div>
+                <div class="card full-card" onclick="openChartsPage()" style="background: rgba(245, 158, 11, 0.05); border-color: var(--primary); flex-direction: row; justify-content: flex-start; gap: 12px; padding: 12px;"><div class="icon-circle" style="color: var(--primary); border-color:var(--primary);"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg></div><div style="text-align: right; flex: 1;"><h3 style="margin:0; color: var(--primary); font-size:14px;">عرض المنحنيات البيانية</h3><div style="color: var(--text-gray); font-size:11px;">منحنى الوفيات واستهلاك العلف</div></div></div>
+                <div class="card full-card" onclick="openDataEntry('sales')" style="border-color: var(--success); background: rgba(16, 185, 129, 0.05); flex-direction: row; justify-content: flex-start; gap: 12px; padding: 12px;"><div class="icon-circle" style="color: var(--success); border-color:var(--success);"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div style="text-align: right; flex: 1;"><h3 style="margin:0; color: var(--success); font-size:14px;">تسجيل المبيعات</h3><div class="value" id="val-sales" style="color: var(--success); font-size:13px;">0 د.ج</div></div></div>
+                <div class="card full-card" onclick="showResults()" style="background: rgba(59, 130, 246, 0.05); border-color: var(--info); padding: 12px;"><div class="icon-circle" style="color: var(--info); border-color:var(--info); margin-bottom: 6px;"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><h3 style="color: var(--text-main); margin-top:0; font-size:14px;">عرض التقرير الختامي (مشاركة وصورة)</h3></div>
             </div>
         </div>
 
@@ -313,77 +211,26 @@
             <button class="btn btn-back" onclick="navigateBack()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> رجوع</button>
             <div class="cycle-header" style="margin-bottom: 12px;">
                 <h3 id="entry-title" style="color: var(--primary); font-size: 16px; margin: 0;">العنوان</h3>
-                <div class="form-group" style="margin-top: 12px;">
-                    <input type="date" id="input-date">
-                    <select id="input-name-select" style="display: none;">
-                        <option value="Démarrage">Démarrage (انطلاق)</option>
-                        <option value="Croissance">Croissance (نمو)</option>
-                        <option value="Finition">Finition (نهاية)</option>
-                    </select>
-                    <input type="text" id="input-name-text" placeholder="البيان">
-                </div>
-                <div class="form-group">
-                    <input type="number" step="0.01" id="input-qty" placeholder="الكمية">
-                    <input type="number" step="0.01" id="input-price" placeholder="سعر الوحدة">
-                </div>
+                <div class="form-group" style="margin-top: 12px;"><input type="date" id="input-date"><select id="input-name-select" style="display: none;"><option value="Démarrage">Démarrage (انطلاق)</option><option value="Croissance">Croissance (نمو)</option><option value="Finition">Finition (نهاية)</option></select><input type="text" id="input-name-text" placeholder="البيان (مثال: اسم الدواء)"></div>
+                <div class="form-group"><input type="number" step="0.01" id="input-qty" placeholder="الكمية"><input type="number" step="0.01" id="input-price" placeholder="سعر الوحدة"></div>
                 <button class="btn btn-action" id="btn-save-record" onclick="addOrUpdateRecord()"><svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> <span id="txt-save-record">حفظ في الجدول</span></button>
             </div>
-            <div class="table-container">
-                <table>
-                    <thead><tr><th>التاريخ</th><th>البيان</th><th>الكمية</th><th>المجموع</th><th>إجراء</th></tr></thead>
-                    <tbody id="table-body"></tbody>
-                </table>
-            </div>
+            <div class="table-container"><table><thead><tr><th>التاريخ</th><th>البيان</th><th>الكمية</th><th>المجموع</th><th>إجراء</th></tr></thead><tbody id="table-body"></tbody></table></div>
         </div>
 
         <div id="charts-page" class="page">
             <button class="btn btn-back" onclick="navigateBack()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> رجوع</button>
             <div class="cycle-header"><h2 style="color: var(--primary); font-size:16px;"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg> المنحنيات البيانية</h2></div>
-            
-            <div class="res-box" style="flex-direction: column; align-items: stretch; margin-bottom: 15px;">
-                <h3 style="margin-bottom: 10px; color: var(--danger); text-align: center;">💀 منحنى الوفيات اليومية</h3>
-                <div class="chart-container"><canvas id="mortalityChart"></canvas></div>
-            </div>
-
-            <div class="res-box" style="flex-direction: column; align-items: stretch;">
-                <h3 style="margin-bottom: 10px; color: var(--primary); text-align: center;">🌾 منحنى استهلاك العلف اليومي</h3>
-                <div class="chart-container"><canvas id="feedChart"></canvas></div>
-            </div>
+            <div class="res-box" style="flex-direction: column; align-items: stretch; margin-bottom: 15px;"><h3 style="margin-bottom: 10px; color: var(--danger); text-align: center;">💀 منحنى الوفيات اليومية</h3><div class="chart-container"><canvas id="mortalityChart"></canvas></div></div>
+            <div class="res-box" style="flex-direction: column; align-items: stretch;"><h3 style="margin-bottom: 10px; color: var(--primary); text-align: center;">🌾 منحنى استهلاك العلف اليومي</h3><div class="chart-container"><canvas id="feedChart"></canvas></div></div>
         </div>
 
         <div id="settings-page" class="page">
             <button class="btn btn-back" onclick="navigateBack()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> رجوع</button>
-            
-            <div class="cycle-header" style="margin-bottom: 15px;">
-                <h3 style="color: var(--info); margin-top: 0; font-size:16px; border-bottom:1px solid var(--border); padding-bottom:10px;">💾 النسخ الاحتياطي للأمان</h3>
-                <p style="font-size: 11px; color: var(--text-gray); margin-bottom: 15px; text-align: right;">لتفادي ضياع بيانات المزارع في حال مسح بيانات التطبيق، قم بنسخها وحفظها في مكان آمن، ثم استرجعها لاحقاً.</p>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn" onclick="exportData()" style="flex: 1; font-size: 12px; background: rgba(168, 85, 247, 0.1); color: var(--gemini); border: 1px solid var(--gemini);">
-                        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> تصدير ونسخ
-                    </button>
-                    <button class="btn" onclick="importDataModal()" style="flex: 1; font-size: 12px; background: rgba(59, 130, 246, 0.1); color: var(--info); border: 1px solid var(--info);">
-                        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> استيراد واسترجاع
-                    </button>
-                </div>
-            </div>
-
             <div class="cycle-header">
-                <h3 style="color: var(--primary); margin-top: 0; font-size:16px; border-bottom:1px solid var(--border); padding-bottom:10px;">⚙️ إعدادات المظهر</h3>
-                <div style="text-align: right; margin-top: 15px;">
-                    <label style="color: var(--text-gray); font-size: 13px;">مظهر التطبيق (الخلفية):</label>
-                    <select id="theme-selector" onchange="changeTheme()" style="width: 100%; padding: 10px; margin-top: 5px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size:12px;">
-                        <option value="dark">الوضع الليلي المتطور (داكن)</option>
-                        <option value="light">الوضع النهاري النقي (مضيء)</option>
-                    </select>
-                </div>
-                <div style="text-align: right; margin-top: 15px;">
-                    <label style="color: var(--text-gray); font-size: 13px;">خط التطبيق:</label>
-                    <select id="font-selector" onchange="changeFont()" style="width: 100%; padding: 10px; margin-top: 5px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size:12px;">
-                        <option value="'Tajawal', sans-serif">تجاول (رسمي)</option>
-                        <option value="'Cairo', sans-serif">كايرو (عريض)</option>
-                        <option value="'Almarai', sans-serif">المراعي (حديث)</option>
-                    </select>
-                </div>
+                <h3 style="color: var(--primary); margin-top: 0; font-size:16px;">⚙️ إعدادات التطبيق</h3>
+                <div style="text-align: right; margin-top: 15px;"><label style="color: var(--text-gray); font-size: 13px;">مظهر التطبيق (الخلفية):</label><select id="theme-selector" onchange="changeTheme()" style="width: 100%; padding: 10px; margin-top: 5px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size:12px;"><option value="dark">الوضع الليلي المتطور (داكن)</option><option value="light">الوضع النهاري النقي (مضيء)</option></select></div>
+                <div style="text-align: right; margin-top: 15px;"><label style="color: var(--text-gray); font-size: 13px;">خط التطبيق:</label><select id="font-selector" onchange="changeFont()" style="width: 100%; padding: 10px; margin-top: 5px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size:12px;"><option value="'Tajawal', sans-serif">تجاول (رسمي)</option><option value="'Cairo', sans-serif">كايرو (عريض)</option><option value="'Almarai', sans-serif">المراعي (حديث)</option></select></div>
             </div>
         </div>
 
@@ -393,140 +240,67 @@
                 <h2 style="text-align: center; color: var(--primary); margin-bottom: 15px; display: none; font-size:18px;" id="print-title">تقرير الدورة</h2>
                 <div class="res-box"><h3>إجمالي المبيعات</h3><h2 style="color: var(--success);" id="res-income">0</h2></div>
                 <div class="res-box"><h3>إجمالي المصاريف</h3><h2 style="color: var(--danger);" id="res-expenses">0</h2></div>
-                <div class="res-box" style="background: rgba(245, 158, 11, 0.05); border-color: var(--primary);">
-                    <h3 style="color: var(--text-main); font-weight: bold;">النتيجة الصافية</h3><h2 id="res-net" style="color: var(--primary);">0</h2>
-                </div>
+                <div class="res-box" style="background: rgba(245, 158, 11, 0.05); border-color: var(--primary);"><h3 style="color: var(--text-main); font-weight: bold;">النتيجة الصافية</h3><h2 id="res-net" style="color: var(--primary);">0</h2></div>
                 <h3 style="color: var(--info); margin-top: 20px; margin-bottom: 10px; font-size:14px; border-bottom:1px solid var(--border); padding-bottom:5px;">مؤشرات الكفاءة (FCR)</h3>
                 <div class="res-box"><h3>اللحم المباع</h3><h2 id="res-meat-kg">0 كغ</h2></div>
                 <div class="res-box"><h3>العلف المستهلك</h3><h2 id="res-feed-total-kg">0 كغ</h2></div>
-                <div class="res-box" style="background: rgba(59, 130, 246, 0.05); border-color: var(--info);">
-                    <h3 style="color: var(--text-main); font-weight: bold;">معامل التحويل (FCR)</h3><h2 style="color: var(--info);" id="res-fcr-val">0</h2>
-                </div>
+                <div class="res-box" style="background: rgba(59, 130, 246, 0.05); border-color: var(--info);"><h3 style="color: var(--text-main); font-weight: bold;">معامل التحويل (FCR)</h3><h2 style="color: var(--info);" id="res-fcr-val">0</h2></div>
             </div>
-            <div style="display: flex; gap: 8px; margin-top: 15px;">
-                <button class="btn btn-action" onclick="shareReport()" style="flex: 1;"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> مشاركة</button>
-                <button class="btn btn-outline" onclick="printReport()" style="flex: 1; border-color:var(--info); color:var(--info);"><svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2-2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> طباعة / PDF</button>
+            
+            <div style="display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap;">
+                <button class="btn btn-action" id="btn-share-image" onclick="shareReportImage()" style="flex: 1; min-width: 100%;"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> مشاركة التقرير كصورة (JPG)</button>
+                <button class="btn" onclick="exportToExcel()" style="flex: 1; min-width: 100%; background-color: #10b981; color: white; margin-top: 5px;"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> تحميل كملف Excel 📊</button>
             </div>
-            <button class="btn" style="background: var(--border); color:var(--text-main); margin-top: 15px;" onclick="archiveCurrentCycle()">
-                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                إنهاء الدورة ونقلها للأرشيف
-            </button>
+            <button class="btn" style="background: var(--border); color:var(--text-main); margin-top: 15px;" onclick="archiveCurrentCycle()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> إنهاء الدورة ونقلها للأرشيف</button>
         </div>
 
         <div id="archive-page" class="page">
             <button class="btn btn-back" onclick="navigateBack()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> رجوع</button>
-            <h3 style="color: var(--text-gray); margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px; font-size:14px;">الدورات المؤرشفة</h3>
+            <h3 style="color: var(--text-gray); margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px; font-size:14px;">الدورات المؤرشفة (اضغط لعرض التفاصيل)</h3>
             <div id="archive-list"></div>
+        </div>
+
+        <div id="archive-details-page" class="page">
+            <button class="btn btn-back" onclick="navigateBack()"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> العودة للأرشيف</button>
+            <div id="archive-details-content"></div>
         </div>
 
     </div>
 
     <div id="custom-modal">
         <div class="modal-content">
-            <h3 id="modal-title">تأكيد</h3>
-            <p id="modal-msg"></p>
+            <h3 id="modal-title">تأكيد</h3><p id="modal-msg" style="color: var(--text-gray); font-size: 13px; margin-bottom:12px;"></p>
             <input type="text" id="modal-input">
-            <textarea id="modal-textarea" style="display:none;"></textarea>
-            <div style="display:flex; gap:8px;">
-                <button id="modal-btn-yes" class="btn" style="flex:1;">نعم</button>
-                <button class="btn btn-back" style="flex:1; margin-bottom:0;" onclick="closeModal()">إلغاء</button>
-            </div>
+            <div style="display:flex; gap:8px;"><button id="modal-btn-yes" class="btn" style="flex:1;">نعم</button><button class="btn btn-back" style="flex:1; margin-bottom:0;" onclick="closeModal()">إلغاء</button></div>
         </div>
     </div>
-    
-    <div id="toast-container"></div>
-    
 </div> 
-<script>
-        /* ================== الإشعارات (Toasts) ================== */
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = 'toast ' + (type === 'error' ? 'error' : '');
-            let icon = type === 'success' ? '<svg viewBox="0 0 24 24" style="width:16px;height:16px;"><polyline points="20 6 9 17 4 12"/></svg>' : '<svg viewBox="0 0 24 24" style="width:16px;height:16px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-            toast.innerHTML = icon + message;
-            container.appendChild(toast);
-            setTimeout(() => { if(toast.parentNode) toast.parentNode.removeChild(toast); }, 2800);
-        }
 
-        /* ================== 100 نصيحة حصرية للفلاح الجزائري ================== */
+<script>
         const geminiTips = [
             "في الأيام الأولى للكتكوت، حافظ على درجة حرارة 33°C. انخفاضها يسبب تجمّع الكتاكيت واختناقها وتأخر في النمو.",
             "راقب فرشة الدواجن (النشارة) يومياً، الفرشة الرطبة والمتعفنة هي السبب الأول لمرض الكوكسيديا (Coccidiose).",
             "تهوية العنبر ليلاً لا تقل أهمية عن النهار، تراكم غاز الأمونيا يسبب التهابات الجهاز التنفسي والعمى للقطيع.",
-            // (بقية النصائح السابقة موجودة ضمنياً، تم اختصارها هنا لتوفير المساحة، يمكنك إعادة وضع كامل المئة نصيحة كما كانت في كودك الأصلي)
-            "وأخيراً، التوفيق من الله، خذ بالأسباب التقنية والعلمية، وثق حساباتك."
+            "استخدام أعلاف عالية الجودة (مثل أعلاف عبوش) يضمن لك معامل تحويل (FCR) ممتاز ويسرع مدة الدورة."
         ];
-        
-        function updateTip() { 
-            document.getElementById('gemini-tip-text').innerText = geminiTips[Math.floor(Math.random() * geminiTips.length)]; 
-        }
-        updateTip(); 
-        setInterval(updateTip, 5 * 60 * 1000); 
+        function updateTip() { document.getElementById('gemini-tip-text').innerText = geminiTips[Math.floor(Math.random() * geminiTips.length)]; }
+        updateTip(); setInterval(updateTip, 5 * 60 * 1000); 
 
-        /* ================== الإعدادات والنسخ الاحتياطي ================== */
         function loadSettings() {
-            let savedTheme = localStorage.getItem('abbTheme') || 'dark';
-            let savedFont = localStorage.getItem('abbFont') || "'Tajawal', sans-serif";
+            let savedTheme = localStorage.getItem('abbTheme') || 'dark'; let savedFont = localStorage.getItem('abbFont') || "'Tajawal', sans-serif";
             document.getElementById('theme-selector').value = savedTheme; document.getElementById('font-selector').value = savedFont;
             document.documentElement.setAttribute('data-theme', savedTheme); document.documentElement.style.setProperty('--font-family', savedFont);
         }
-        function changeTheme() { 
-            let val = document.getElementById('theme-selector').value; 
-            document.documentElement.setAttribute('data-theme', val); 
-            localStorage.setItem('abbTheme', val); 
-            if(document.getElementById('charts-page').classList.contains('active-page')) renderCharts(); 
-        }
+        function changeTheme() { let val = document.getElementById('theme-selector').value; document.documentElement.setAttribute('data-theme', val); localStorage.setItem('abbTheme', val); if(document.getElementById('charts-page').classList.contains('active-page')) renderCharts(); }
         function changeFont() { let val = document.getElementById('font-selector').value; document.documentElement.style.setProperty('--font-family', val); localStorage.setItem('abbFont', val); }
         loadSettings();
 
-        // دالة تصدير البيانات لتتوافق مع Webview
-        function exportData() {
-            const dataStr = localStorage.getItem('poultryAppV12') || '{}';
-            openModal('تصدير البيانات', 'قم بنسخ النص التالي بالكامل وحفظه في مكان آمن لاسترجاعه لاحقاً:', false, 'نسخ وإغلاق', function() {
-                const txt = document.getElementById('modal-textarea');
-                txt.select();
-                txt.setSelectionRange(0, 99999);
-                try {
-                    document.execCommand('copy');
-                    showToast('تم نسخ البيانات بنجاح!');
-                } catch(e) {
-                    showToast('فشل النسخ التلقائي، الرجاء النسخ يدوياً', 'error');
-                }
-            }, true);
-            document.getElementById('modal-textarea').value = btoa(encodeURIComponent(dataStr)); // تشفير مبسط لمنع مشاكل الرموز
-        }
-
-        // دالة استيراد البيانات
-        function importDataModal() {
-            openModal('استرجاع البيانات', 'قم بلصق الكود الذي نسخته سابقاً هنا لتسترجع كل مزارعك:', false, 'استرجاع الآن', function() {
-                let encodedData = document.getElementById('modal-textarea').value.trim();
-                if(!encodedData) return;
-                try {
-                    let decodedData = decodeURIComponent(atob(encodedData));
-                    JSON.parse(decodedData); // فحص هل هو JSON صحيح
-                    localStorage.setItem('poultryAppV12', decodedData);
-                    showToast('تم استرجاع البيانات بنجاح! سيتم إعادة التحميل...');
-                    setTimeout(() => location.reload(), 1500);
-                } catch(e) {
-                    showToast('عذراً، النص المدخل غير صالح أو تالف!', 'error');
-                }
-            }, true);
-            document.getElementById('modal-textarea').value = '';
-        }
-
-        /* ================== نظام التوجيه وزر الرجوع ================== */
         function navigateToPage(pageId) { hideAllPages(); document.getElementById(pageId).classList.add('active-page'); history.pushState({ page: pageId }, "", "#" + pageId); }
         function hideAllPages() { document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page')); document.getElementById('app-wrapper').scrollTo(0,0); }
         
         window.addEventListener('popstate', function(event) {
             if(document.getElementById('custom-modal').style.display === 'flex') { closeModal(); return; }
-            if (event.state && event.state.page) {
-                hideAllPages(); document.getElementById(event.state.page).classList.add('active-page');
-                if(event.state.page === 'dashboard-page') updateDashboard();
-                if(event.state.page === 'main-list-page') renderMainList();
-                if(event.state.page === 'charts-page') renderCharts();
-            } else { showMainList(); }
+            if (event.state && event.state.page) { hideAllPages(); document.getElementById(event.state.page).classList.add('active-page'); if(event.state.page === 'dashboard-page') updateDashboard(); if(event.state.page === 'main-list-page') renderMainList(); if(event.state.page === 'charts-page') renderCharts(); } else { showMainList(); }
         });
 
         function showMainList() { saveAppState(); renderMainList(); navigateToPage('main-list-page'); }
@@ -535,40 +309,13 @@
         function navigateBack() { history.back(); }
         function exitAppConfirmation() { openModal('تأكيد الخروج', 'هل تريد إغلاق تطبيق بورصة الدواجن؟', false, 'نعم، إغلاق', function() { if(navigator.app && navigator.app.exitApp) { navigator.app.exitApp(); } else { window.close(); history.go(-2); } }); }
 
-        /* ================== الأخبار و الإنذار ================== */
         const NEWS_API_URL = "https://api.npoint.io/a07715652bc0a57eafde"; 
-        fetch(NEWS_API_URL).then(res => res.json()).then(data => {
-            if(data && data.news) {
-                document.getElementById('live-news-text').innerText = data.news;
-                if(data.news.includes('عاجل')) { document.getElementById('news-ticker').classList.add('urgent-flash'); document.getElementById('ticker-label').innerHTML = '🚨 عاجل'; }
-            }
-        }).catch(() => {
-            // معالجة الانقطاع الذكية مخصصة لأسواق العلمة والأسواق المحلية
-            document.getElementById('live-news-text').innerText = "جاري تحديث أسعار بورصة العلمة والأسواق المحلية... (أنت في وضع عدم الاتصال حالياً)";
-        });
+        fetch(NEWS_API_URL).then(res => res.json()).then(data => { if(data && data.news) { document.getElementById('live-news-text').innerText = data.news; if(data.news.includes('عاجل')) { document.getElementById('news-ticker').classList.add('urgent-flash'); document.getElementById('ticker-label').innerHTML = '🚨 عاجل'; } } }).catch(() => console.log("Offline"));
 
-        /* ================== قواعد البيانات (معالجة الأخطاء) ================== */
-        let appState;
-        try {
-            appState = JSON.parse(localStorage.getItem('poultryAppV12')) || { activeCycles: [], archivedCycles: [], currentCycleId: null };
-        } catch(e) {
-            // في حالة تلف البيانات حتى لا يظهر التطبيق كشاشة بيضاء
-            appState = { activeCycles: [], archivedCycles: [], currentCycleId: null };
-        }
-        
-        let db = null; let currentCategory = ''; let editingRecordId = null; 
-        let mortChartInstance = null; let feedChartInstance = null;
+        let appState = JSON.parse(localStorage.getItem('poultryAppV12')) || { activeCycles: [], archivedCycles: [], currentCycleId: null };
+        let db = null; let currentCategory = ''; let editingRecordId = null; let mortChartInstance = null; let feedChartInstance = null;
 
-        const catSettings = {
-            'chicks': { title: 'شراء الكتاكيت', namePlaceholder: 'السلالة', qtyPlaceholder: 'العدد' },
-            'feed': { title: 'استهلاك العلف', useSelect: true, qtyPlaceholder: 'الكمية (قنطار)' },
-            'gas': { title: 'الغاز والتدفئة', namePlaceholder: 'البيان', qtyPlaceholder: 'الكمية' },
-            'bedding': { title: 'الفراش والنشارة', namePlaceholder: 'النوع', qtyPlaceholder: 'الكمية' },
-            'mortality': { title: 'الوفيات', namePlaceholder: 'السبب', qtyPlaceholder: 'العدد', hidePrice: true },
-            'vet': { title: 'البيطري والأدوية', namePlaceholder: 'الدواء', qtyPlaceholder: 'الكمية' },
-            'other': { title: 'مصاريف أخرى', namePlaceholder: 'البيان', qtyPlaceholder: 'الكمية' },
-            'sales': { title: 'المبيعات', namePlaceholder: 'البيان', qtyPlaceholder: 'الوزن (كغ)' }
-        };
+        const catSettings = { 'chicks': { title: 'شراء الكتاكيت', namePlaceholder: 'السلالة', qtyPlaceholder: 'العدد' }, 'feed': { title: 'استهلاك العلف', useSelect: true, qtyPlaceholder: 'الكمية (قنطار)' }, 'gas': { title: 'الغاز والتدفئة', namePlaceholder: 'البيان', qtyPlaceholder: 'الكمية' }, 'bedding': { title: 'الفراش والنشارة', namePlaceholder: 'النوع', qtyPlaceholder: 'الكمية' }, 'mortality': { title: 'الوفيات', namePlaceholder: 'السبب', qtyPlaceholder: 'العدد', hidePrice: true }, 'vet': { title: 'البيطري والأدوية', namePlaceholder: 'الدواء', qtyPlaceholder: 'الكمية' }, 'other': { title: 'مصاريف أخرى', namePlaceholder: 'البيان', qtyPlaceholder: 'الكمية' }, 'sales': { title: 'المبيعات', namePlaceholder: 'البيان', qtyPlaceholder: 'الوزن (كغ)' } };
 
         function openDashboard(cycleId) {
             appState.currentCycleId = cycleId; let cycleObj = appState.activeCycles.find(c => c.id == cycleId); db = cycleObj.data;
@@ -589,128 +336,177 @@
             });
         }
 
-        function promptNewCycle() {
-            openModal('مزرعة جديدة', 'أدخل اسم المزرعة أو الدورة:', true, 'إنشاء', function(name) {
-                appState.activeCycles.unshift({ id: Date.now(), name: name, data: { startDate: '', chicks: [], feed: [], gas: [], bedding: [], mortality: [], vet: [], other: [], sales: [] }});
-                saveAppState(); showToast('تم إنشاء مزرعة جديدة بنجاح!'); openDashboard(appState.activeCycles[0].id);
-            });
-        }
-        
-        function editCycleName() {
-            let cycleObj = appState.activeCycles.find(c => c.id == appState.currentCycleId);
-            openModal('تعديل اسم الدورة', '', true, 'حفظ', function(newName) {
-                cycleObj.name = newName; saveAppState(); 
-                document.getElementById('current-cycle-name').innerHTML = `<span>${newName}</span> <span class="edit-icon icon-sm" onclick="editCycleName()"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>`;
-                showToast('تم تعديل الاسم بنجاح!');
-            }); document.getElementById('modal-input').value = cycleObj.name;
-        }
+        function promptNewCycle() { openModal('مزرعة جديدة', 'أدخل اسم المزرعة أو الدورة:', true, 'إنشاء', function(name) { appState.activeCycles.unshift({ id: Date.now(), name: name, data: { startDate: '', chicks: [], feed: [], gas: [], bedding: [], mortality: [], vet: [], other: [], sales: [] }}); saveAppState(); openDashboard(appState.activeCycles[0].id); }); }
+        function editCycleName() { let cycleObj = appState.activeCycles.find(c => c.id == appState.currentCycleId); openModal('تعديل اسم الدورة', '', true, 'حفظ', function(newName) { cycleObj.name = newName; saveAppState(); document.getElementById('current-cycle-name').innerHTML = `<span>${newName}</span> <span class="edit-icon icon-sm" onclick="editCycleName()"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>`; }); document.getElementById('modal-input').value = cycleObj.name; }
 
         function updateDashboard() {
             if(!db) return; db.startDate = document.getElementById('startDate').value; saveAppState();
-            let ageEl = document.getElementById('dash-age');
-            if (db.startDate) { let diffDays = Math.floor((new Date() - new Date(db.startDate)) / (1000 * 60 * 60 * 24)); ageEl.innerText = (diffDays >= 0 ? diffDays : 0) + ' يوم'; } else { ageEl.innerText = '-'; }
+            let ageEl = document.getElementById('dash-age'); if (db.startDate) { let diffDays = Math.floor((new Date() - new Date(db.startDate)) / (1000 * 60 * 60 * 24)); ageEl.innerText = (diffDays >= 0 ? diffDays : 0) + ' يوم'; } else { ageEl.innerText = '-'; }
             let totalChicks = sumCol('chicks', 'qty'), totalMortality = sumCol('mortality', 'qty');
-            document.getElementById('dash-remaining').innerText = (totalChicks - totalMortality).toLocaleString() + ' طير';
-            document.getElementById('val-chicks').innerText = totalChicks.toLocaleString() + ' صوص'; document.getElementById('val-mortality').innerText = totalMortality.toLocaleString() + ' طير'; 
+            document.getElementById('dash-remaining').innerText = (totalChicks - totalMortality).toLocaleString() + ' طير'; document.getElementById('val-chicks').innerText = totalChicks.toLocaleString() + ' صوص'; document.getElementById('val-mortality').innerText = totalMortality.toLocaleString() + ' طير'; 
             let dem = 0, cro = 0, fin = 0; (db.feed || []).forEach(f => { if(f.name === 'Démarrage') dem += parseFloat(f.qty); else if(f.name === 'Croissance') cro += parseFloat(f.qty); else if(f.name === 'Finition') fin += parseFloat(f.qty); });
             document.getElementById('feed-dem').innerText = dem; document.getElementById('feed-cro').innerText = cro; document.getElementById('feed-fin').innerText = fin; document.getElementById('val-feed').innerText = 'الإجمالي: ' + (dem + cro + fin) + ' قنطار';
             document.getElementById('val-gas').innerText = sumCol('gas', 'total').toLocaleString() + ' د.ج'; document.getElementById('val-bedding').innerText = sumCol('bedding', 'total').toLocaleString() + ' د.ج'; document.getElementById('val-vet').innerText = sumCol('vet', 'total').toLocaleString() + ' د.ج'; document.getElementById('val-other').innerText = sumCol('other', 'total').toLocaleString() + ' د.ج'; document.getElementById('val-sales').innerText = sumCol('sales', 'total').toLocaleString() + ' د.ج'; 
         }
 
-        function openDataEntry(category) {
-            currentCategory = category; let settings = catSettings[category]; document.getElementById('entry-title').innerText = settings.title;
-            if(settings.useSelect) { document.getElementById('input-name-select').style.display = 'block'; document.getElementById('input-name-text').style.display = 'none'; } else { document.getElementById('input-name-select').style.display = 'none'; document.getElementById('input-name-text').style.display = 'block'; document.getElementById('input-name-text').placeholder = settings.namePlaceholder; }
-            document.getElementById('input-qty').placeholder = settings.qtyPlaceholder; let priceInput = document.getElementById('input-price');
-            if(settings.hidePrice) { priceInput.style.display = 'none'; priceInput.value = 0; } else { priceInput.style.display = 'block'; priceInput.value = ''; }
-            resetForm(); renderTable(); navigateToPage('data-entry-page');
-        }
-
+        function openDataEntry(category) { currentCategory = category; let settings = catSettings[category]; document.getElementById('entry-title').innerText = settings.title; if(settings.useSelect) { document.getElementById('input-name-select').style.display = 'block'; document.getElementById('input-name-text').style.display = 'none'; } else { document.getElementById('input-name-select').style.display = 'none'; document.getElementById('input-name-text').style.display = 'block'; document.getElementById('input-name-text').placeholder = settings.namePlaceholder; } document.getElementById('input-qty').placeholder = settings.qtyPlaceholder; let priceInput = document.getElementById('input-price'); if(settings.hidePrice) { priceInput.style.display = 'none'; priceInput.value = 0; } else { priceInput.style.display = 'block'; priceInput.value = ''; } resetForm(); renderTable(); navigateToPage('data-entry-page'); }
         function resetForm() { editingRecordId = null; document.getElementById('input-qty').value = ''; document.getElementById('input-name-text').value = ''; if(!catSettings[currentCategory].hidePrice) document.getElementById('input-price').value = ''; document.getElementById('txt-save-record').innerText = 'حفظ في الجدول'; document.getElementById('btn-save-record').style.backgroundColor = 'var(--info)'; }
-
-        function addOrUpdateRecord() {
-            let date = document.getElementById('input-date').value, name = catSettings[currentCategory].useSelect ? document.getElementById('input-name-select').value : document.getElementById('input-name-text').value;
-            let qty = parseFloat(document.getElementById('input-qty').value) || 0, price = parseFloat(document.getElementById('input-price').value) || 0;
-            if(!name || qty <= 0) { showToast('يرجى إدخال البيانات بشكل صحيح!', 'error'); return; }
-            let total = currentCategory === 'mortality' ? 0 : (qty * price);
-            if (editingRecordId) { let record = db[currentCategory].find(r => r.id === editingRecordId); if(record) { record.date = date; record.name = name; record.qty = qty; record.price = price; record.total = total; } showToast('تم التحديث بنجاح!'); } else { db[currentCategory].push({ id: Date.now(), date, name, qty, price, total }); showToast('تم الحفظ في الجدول بنجاح!'); }
-            saveAppState(); resetForm(); renderTable();
-        }
-
+        function addOrUpdateRecord() { let date = document.getElementById('input-date').value, name = catSettings[currentCategory].useSelect ? document.getElementById('input-name-select').value : document.getElementById('input-name-text').value; let qty = parseFloat(document.getElementById('input-qty').value) || 0, price = parseFloat(document.getElementById('input-price').value) || 0; if(!name || qty <= 0) { openModal('تنبيه', 'يرجى إدخال البيانات بشكل صحيح!', false, 'حسناً', null); return; } let total = currentCategory === 'mortality' ? 0 : (qty * price); if (editingRecordId) { let record = db[currentCategory].find(r => r.id === editingRecordId); if(record) { record.date = date; record.name = name; record.qty = qty; record.price = price; record.total = total; } } else { db[currentCategory].push({ id: Date.now(), date, name, qty, price, total }); } saveAppState(); resetForm(); renderTable(); }
         function editRecord(id) { let record = db[currentCategory].find(r => r.id === id); if(!record) return; document.getElementById('input-date').value = record.date; if(catSettings[currentCategory].useSelect) { document.getElementById('input-name-select').value = record.name; } else { document.getElementById('input-name-text').value = record.name; } document.getElementById('input-qty').value = record.qty; if(!catSettings[currentCategory].hidePrice) document.getElementById('input-price').value = record.price; editingRecordId = id; document.getElementById('txt-save-record').innerText = 'تحديث السجل'; document.getElementById('btn-save-record').style.backgroundColor = 'var(--success)'; document.getElementById('app-wrapper').scrollTo(0, 0); }
-        function deleteRecord(id) { openModal('تأكيد الحذف', 'حذف هذا السجل نهائياً؟', false, 'نعم، احذف', function() { db[currentCategory] = db[currentCategory].filter(r => r.id !== id); if(editingRecordId === id) resetForm(); saveAppState(); renderTable(); showToast('تم حذف السجل.'); }); }
+        function deleteRecord(id) { openModal('تأكيد الحذف', 'حذف هذا السجل نهائياً؟', false, 'نعم، احذف', function() { db[currentCategory] = db[currentCategory].filter(r => r.id !== id); if(editingRecordId === id) resetForm(); saveAppState(); renderTable(); }); }
 
-        function renderTable() {
-            let tbody = document.getElementById('table-body'); tbody.innerHTML = '';
-            [...db[currentCategory]].reverse().forEach(r => {
-                let shortDate = r.date.substring(5); 
-                tbody.innerHTML += `<tr><td>${shortDate}</td><td>${r.name}</td><td>${r.qty}</td><td style="font-weight:bold; color:var(--primary);">${r.total}</td>
-                                    <td><div class="action-btns"><button class="icon-btn edit-btn" onclick="editRecord(${r.id})"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="icon-btn delete-btn" onclick="deleteRecord(${r.id})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div></td></tr>`;
-            });
-        }
+        function renderTable() { let tbody = document.getElementById('table-body'); tbody.innerHTML = ''; [...db[currentCategory]].reverse().forEach(r => { let shortDate = r.date.substring(5); tbody.innerHTML += `<tr><td>${shortDate}</td><td>${r.name}</td><td>${r.qty}</td><td style="font-weight:bold; color:var(--primary);">${r.total}</td><td><div class="action-btns"><button class="icon-btn edit-btn" onclick="editRecord(${r.id})"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="icon-btn delete-btn" onclick="deleteRecord(${r.id})"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div></td></tr>`; }); }
 
-        /* ================== المنحنيات البيانية مع التدرجات اللونية ================== */
         function openChartsPage() { navigateToPage('charts-page'); renderCharts(); }
+        function renderCharts() { if(!db) return; let mortData = {}; (db.mortality || []).forEach(r => { mortData[r.date] = (mortData[r.date] || 0) + parseFloat(r.qty); }); let mortDates = Object.keys(mortData).sort(); let mortValues = mortDates.map(d => mortData[d]); let feedData = {}; (db.feed || []).forEach(r => { feedData[r.date] = (feedData[r.date] || 0) + parseFloat(r.qty); }); let feedDates = Object.keys(feedData).sort(); let feedValues = feedDates.map(d => feedData[d]); let isLight = document.documentElement.getAttribute('data-theme') === 'light'; Chart.defaults.color = isLight ? '#64748b' : '#94a3b8'; Chart.defaults.font.family = getComputedStyle(document.documentElement).getPropertyValue('--font-family'); let gridColor = isLight ? '#e2e8f0' : '#334155'; if(mortChartInstance) mortChartInstance.destroy(); if(feedChartInstance) feedChartInstance.destroy(); mortChartInstance = new Chart(document.getElementById('mortalityChart').getContext('2d'), { type: 'line', data: { labels: mortDates.map(d=>d.substring(5)), datasets: [{ label: 'الوفيات (طير)', data: mortValues, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.2)', borderWidth: 2, fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x:{grid:{color:gridColor}}, y:{grid:{color:gridColor}} } } }); feedChartInstance = new Chart(document.getElementById('feedChart').getContext('2d'), { type: 'bar', data: { labels: feedDates.map(d=>d.substring(5)), datasets: [{ label: 'العلف (قنطار)', data: feedValues, backgroundColor: '#f59e0b', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x:{grid:{color:gridColor}}, y:{grid:{color:gridColor}} } } }); }
 
-        function renderCharts() {
+        function showResults() { navigateToPage('results-page'); let cycleName = appState.activeCycles.find(c => c.id == appState.currentCycleId).name; document.getElementById('print-title').innerText = "تقرير مزرعة: " + cycleName; let income = sumCol('sales', 'total'), expenses = sumCol('chicks', 'total') + sumCol('feed', 'total') + sumCol('gas', 'total') + sumCol('bedding', 'total') + sumCol('vet', 'total') + sumCol('other', 'total'); let net = income - expenses; document.getElementById('res-income').innerText = income.toLocaleString() + ' د.ج'; document.getElementById('res-expenses').innerText = expenses.toLocaleString() + ' د.ج'; let netEl = document.getElementById('res-net'); if (net > 0) { netEl.innerText = net.toLocaleString() + ' د.ج'; netEl.style.color = 'var(--success)'; } else if (net < 0) { netEl.innerText = Math.abs(net).toLocaleString() + ' د.ج'; netEl.style.color = 'var(--danger)'; } else { netEl.innerText = '0 د.ج'; netEl.style.color = 'var(--text-main)'; } let feedKg = sumCol('feed', 'qty') * 100; let meatKg = sumCol('sales', 'qty'); document.getElementById('res-feed-total-kg').innerText = feedKg.toLocaleString() + ' كغ'; document.getElementById('res-meat-kg').innerText = meatKg.toLocaleString() + ' كغ'; document.getElementById('res-fcr-val').innerText = meatKg > 0 ? (feedKg / meatKg).toFixed(2) : '-'; }
+
+        /* ================== استخراج صورة JPG مدمجة للتقرير ================== */
+        async function shareReportImage() {
             if(!db) return;
-            let mortData = {}; (db.mortality || []).forEach(r => { mortData[r.date] = (mortData[r.date] || 0) + parseFloat(r.qty); });
-            let mortDates = Object.keys(mortData).sort(); let mortValues = mortDates.map(d => mortData[d]);
+            let cycleObj = appState.activeCycles.find(c => c.id == appState.currentCycleId);
+            let btn = document.getElementById('btn-share-image');
+            btn.innerHTML = 'جاري تحضير الصورة... ⏳';
+            btn.disabled = true;
 
-            let feedData = {}; (db.feed || []).forEach(r => { feedData[r.date] = (feedData[r.date] || 0) + parseFloat(r.qty); });
-            let feedDates = Object.keys(feedData).sort(); let feedValues = feedDates.map(d => feedData[d]);
+            // حساب المجاميع للجدول
+            let totals = {
+                chicks: { qty: sumCol('chicks', 'qty'), total: sumCol('chicks', 'total') },
+                feed: { qty: sumCol('feed', 'qty'), total: sumCol('feed', 'total') },
+                mortality: { qty: sumCol('mortality', 'qty'), total: 0 },
+                vet: { qty: '-', total: sumCol('vet', 'total') },
+                gas: { qty: '-', total: sumCol('gas', 'total') },
+                bedding: { qty: '-', total: sumCol('bedding', 'total') },
+                other: { qty: '-', total: sumCol('other', 'total') },
+                sales: { qty: sumCol('sales', 'qty'), total: sumCol('sales', 'total') }
+            };
 
-            let isLight = document.documentElement.getAttribute('data-theme') === 'light';
-            Chart.defaults.color = isLight ? '#64748b' : '#94a3b8';
-            Chart.defaults.font.family = getComputedStyle(document.documentElement).getPropertyValue('--font-family');
-            let gridColor = isLight ? '#e2e8f0' : '#334155';
+            let netProfit = totals.sales.total - (totals.chicks.total + totals.feed.total + totals.gas.total + totals.bedding.total + totals.vet.total + totals.other.total);
+            let fcr = totals.sales.qty > 0 ? ((totals.feed.qty * 100) / totals.sales.qty).toFixed(2) : '-';
 
-            let ctxMort = document.getElementById('mortalityChart').getContext('2d');
-            let gradMort = ctxMort.createLinearGradient(0, 0, 0, 220);
-            gradMort.addColorStop(0, 'rgba(239, 68, 68, 0.4)'); gradMort.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
+            // إنشاء واجهة للصورة
+            let exportDiv = document.createElement('div');
+            exportDiv.style.cssText = "width: 700px; padding: 30px; background-color: #ffffff; color: #0f172a; font-family: 'Tajawal', sans-serif; direction: rtl; position: absolute; left: -9999px; top: 0;";
+            exportDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #f59e0b; padding-bottom: 15px; margin-bottom: 25px;">
+                    <div>
+                        <h1 style="margin: 0; color: #1e293b; font-size: 26px;">تقرير دورة: ${cycleObj.name}</h1>
+                        <p style="margin: 5px 0 0; color: #64748b; font-size: 16px;">تاريخ الإدخال: ${db.startDate || 'غير محدد'}</p>
+                    </div>
+                    <div style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid #f59e0b; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 800; color: #f59e0b; font-size: 13px; line-height: 1.3; background-color: #fff;">
+                        بورصة<br>الدواجن
+                    </div>
+                </div>
 
-            let ctxFeed = document.getElementById('feedChart').getContext('2d');
-            let gradFeed = ctxFeed.createLinearGradient(0, 0, 0, 220);
-            gradFeed.addColorStop(0, 'rgba(245, 158, 11, 0.9)'); gradFeed.addColorStop(1, 'rgba(245, 158, 11, 0.3)');
+                <div style="display: flex; gap: 15px; margin-bottom: 25px;">
+                    <div style="flex:1; background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0; text-align:center;">
+                        <div style="color:#64748b; font-size:14px;">المبيعات</div>
+                        <div style="color:#10b981; font-weight:bold; font-size:20px;">${totals.sales.total.toLocaleString()} د.ج</div>
+                    </div>
+                    <div style="flex:1; background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0; text-align:center;">
+                        <div style="color:#64748b; font-size:14px;">المصاريف</div>
+                        <div style="color:#ef4444; font-weight:bold; font-size:20px;">${(totals.sales.total - netProfit).toLocaleString()} د.ج</div>
+                    </div>
+                    <div style="flex:1; background:#fffbeb; padding:15px; border-radius:8px; border:1px solid #f59e0b; text-align:center;">
+                        <div style="color:#f59e0b; font-size:14px;">الصافي</div>
+                        <div style="color:${netProfit >= 0 ? '#10b981' : '#ef4444'}; font-weight:bold; font-size:20px;">${netProfit.toLocaleString()} د.ج</div>
+                    </div>
+                </div>
 
-            if(mortChartInstance) mortChartInstance.destroy(); if(feedChartInstance) feedChartInstance.destroy();
+                <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 16px;">
+                    <thead>
+                        <tr style="background: #1e293b; color: #ffffff;">
+                            <th style="padding: 12px; border: 1px solid #cbd5e1;">القسم / البيان</th>
+                            <th style="padding: 12px; border: 1px solid #cbd5e1;">الكمية الإجمالية</th>
+                            <th style="padding: 12px; border: 1px solid #cbd5e1;">المبلغ الإجمالي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td style="padding:10px; border:1px solid #cbd5e1; font-weight:bold;">الكتاكيت</td><td style="padding:10px; border:1px solid #cbd5e1;">${totals.chicks.qty} صوص</td><td style="padding:10px; border:1px solid #cbd5e1; color:#ef4444;">${totals.chicks.total.toLocaleString()} د.ج</td></tr>
+                        <tr style="background:#f8fafc;"><td style="padding:10px; border:1px solid #cbd5e1; font-weight:bold;">استهلاك العلف</td><td style="padding:10px; border:1px solid #cbd5e1;">${totals.feed.qty} قنطار</td><td style="padding:10px; border:1px solid #cbd5e1; color:#ef4444;">${totals.feed.total.toLocaleString()} د.ج</td></tr>
+                        <tr><td style="padding:10px; border:1px solid #cbd5e1; font-weight:bold;">الوفيات</td><td style="padding:10px; border:1px solid #cbd5e1; color:#ef4444;">${totals.mortality.qty} طير</td><td style="padding:10px; border:1px solid #cbd5e1;">-</td></tr>
+                        <tr style="background:#f8fafc;"><td style="padding:10px; border:1px solid #cbd5e1; font-weight:bold;">أدوية وبيطري</td><td style="padding:10px; border:1px solid #cbd5e1;">-</td><td style="padding:10px; border:1px solid #cbd5e1; color:#ef4444;">${totals.vet.total.toLocaleString()} د.ج</td></tr>
+                        <tr><td style="padding:10px; border:1px solid #cbd5e1; font-weight:bold;">تدفئة وغاز</td><td style="padding:10px; border:1px solid #cbd5e1;">-</td><td style="padding:10px; border:1px solid #cbd5e1; color:#ef4444;">${totals.gas.total.toLocaleString()} د.ج</td></tr>
+                        <tr style="background:#f8fafc;"><td style="padding:10px; border:1px solid #cbd5e1; font-weight:bold;">نشارة وفرشة</td><td style="padding:10px; border:1px solid #cbd5e1;">-</td><td style="padding:10px; border:1px solid #cbd5e1; color:#ef4444;">${totals.bedding.total.toLocaleString()} د.ج</td></tr>
+                        <tr><td style="padding:10px; border:1px solid #cbd5e1; font-weight:bold;">مصاريف أخرى</td><td style="padding:10px; border:1px solid #cbd5e1;">-</td><td style="padding:10px; border:1px solid #cbd5e1; color:#ef4444;">${totals.other.total.toLocaleString()} د.ج</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top: 20px; text-align: center; color: #3b82f6; font-size: 18px; font-weight: bold; padding: 10px; background: #eff6ff; border-radius: 8px;">
+                    معامل التحويل (FCR): ${fcr}
+                </div>
+                <div style="margin-top: 15px; text-align: center; color: #94a3b8; font-size: 12px;">تطبيق بورصة الدواجن - النظام الرقمي</div>
+            `;
+            
+            document.body.appendChild(exportDiv);
 
-            mortChartInstance = new Chart(ctxMort, {
-                type: 'line', data: { labels: mortDates.map(d=>d.substring(5)), datasets: [{ label: 'الوفيات (طير)', data: mortValues, borderColor: '#ef4444', backgroundColor: gradMort, borderWidth: 2, fill: true, tension: 0.4, pointBackgroundColor: '#ef4444' }] },
-                options: { responsive: true, maintainAspectRatio: false, scales: { x:{grid:{color:gridColor}}, y:{grid:{color:gridColor}} } }
-            });
-
-            feedChartInstance = new Chart(ctxFeed, {
-                type: 'bar', data: { labels: feedDates.map(d=>d.substring(5)), datasets: [{ label: 'العلف (قنطار)', data: feedValues, backgroundColor: gradFeed, borderRadius: 4 }] },
-                options: { responsive: true, maintainAspectRatio: false, scales: { x:{grid:{color:gridColor}}, y:{grid:{color:gridColor}} } }
-            });
+            try {
+                let canvas = await html2canvas(exportDiv, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+                document.body.removeChild(exportDiv);
+                
+                canvas.toBlob(blob => {
+                    let file = new File([blob], `Report_${cycleObj.name}.jpg`, { type: 'image/jpeg' });
+                    // محاولة المشاركة المباشرة إذا كان الهاتف يدعمها
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        navigator.share({ title: 'تقرير الدورة', files: [file] })
+                        .then(() => { btn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> مشاركة التقرير كصورة (JPG)'; btn.disabled = false; })
+                        .catch(err => { forceDownloadBlob(blob, file.name, btn); });
+                    } else {
+                        forceDownloadBlob(blob, file.name, btn);
+                    }
+                }, 'image/jpeg', 0.9);
+            } catch (e) {
+                console.error(e);
+                alert("حدث خطأ أثناء إنشاء الصورة.");
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> مشاركة التقرير كصورة (JPG)';
+                btn.disabled = false;
+            }
         }
 
-        /* ================== الطباعة والمشاركة ================== */
-        function showResults() {
-            navigateToPage('results-page');
-            let cycleName = appState.activeCycles.find(c => c.id == appState.currentCycleId).name; document.getElementById('print-title').innerText = "تقرير مزرعة: " + cycleName;
-            let income = sumCol('sales', 'total'), expenses = sumCol('chicks', 'total') + sumCol('feed', 'total') + sumCol('gas', 'total') + sumCol('bedding', 'total') + sumCol('vet', 'total') + sumCol('other', 'total');
-            let net = income - expenses; document.getElementById('res-income').innerText = income.toLocaleString() + ' د.ج'; document.getElementById('res-expenses').innerText = expenses.toLocaleString() + ' د.ج';
-            let netEl = document.getElementById('res-net'); if (net > 0) { netEl.innerText = net.toLocaleString() + ' د.ج'; netEl.style.color = 'var(--success)'; } else if (net < 0) { netEl.innerText = Math.abs(net).toLocaleString() + ' د.ج'; netEl.style.color = 'var(--danger)'; } else { netEl.innerText = '0 د.ج'; netEl.style.color = 'var(--text-main)'; }
-            let feedKg = sumCol('feed', 'qty') * 100; let meatKg = sumCol('sales', 'qty'); document.getElementById('res-feed-total-kg').innerText = feedKg.toLocaleString() + ' كغ'; document.getElementById('res-meat-kg').innerText = meatKg.toLocaleString() + ' كغ'; document.getElementById('res-fcr-val').innerText = meatKg > 0 ? (feedKg / meatKg).toFixed(2) : '-';
+        function forceDownloadBlob(blob, filename, btn) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none'; a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click();
+            setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 100);
+            openModal('تم الحفظ', 'تم تحميل التقرير كصورة في هاتفك.', false, 'حسناً', null);
+            btn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> مشاركة التقرير كصورة (JPG)';
+            btn.disabled = false;
         }
 
-        function printReport() { document.getElementById('print-title').style.display = 'block'; window.print(); document.getElementById('print-title').style.display = 'none'; }
-        function shareReport() {
-            let cycleName = appState.activeCycles.find(c => c.id == appState.currentCycleId).name;
-            let reportText = `📋 *تقرير بورصة الدواجن*\n\n🏠 المزرعة: ${cycleName}\n📈 المبيعات: ${document.getElementById('res-income').innerText}\n📉 المصاريف: ${document.getElementById('res-expenses').innerText}\n💰 الصافي: ${document.getElementById('res-net').innerText}\n⚖️ (FCR): ${document.getElementById('res-fcr-val').innerText}\n\nتطبيق "بورصة الدواجن - عبوش" 🐔`;
-            if (navigator.share) { navigator.share({ title: 'تقرير الدورة', text: reportText }).catch(console.error); } else { showToast('تم إنشاء التقرير لمشاركته.', 'success'); }
+        /* ================== استخراج Excel ================== */
+        function exportToExcel() {
+            if(!db) return; let cycleObj = appState.activeCycles.find(c => c.id == appState.currentCycleId); let wb = XLSX.utils.book_new();
+            function addSheet(categoryName, sheetTitle) {
+                let dataArray = db[categoryName];
+                if(dataArray && dataArray.length > 0) {
+                    let ws_data = [["التاريخ", "البيان", "الكمية", "السعر (د.ج)", "المجموع (د.ج)"]];
+                    dataArray.forEach(r => { ws_data.push([r.date, r.name, r.qty, r.price || 0, r.total || 0]); });
+                    let totalSum = dataArray.reduce((sum, r) => sum + (r.total || 0), 0); let qtySum = dataArray.reduce((sum, r) => sum + (parseFloat(r.qty) || 0), 0);
+                    ws_data.push(["", "الإجمالي النهائي", qtySum, "", totalSum]);
+                    let ws = XLSX.utils.aoa_to_sheet(ws_data);
+                    if(!ws['!views']) ws['!views'] = []; ws['!views'].push({ rightToLeft: true });
+                    XLSX.utils.book_append_sheet(wb, ws, sheetTitle);
+                }
+            }
+            let income = sumCol('sales', 'total'); let expenses = sumCol('chicks', 'total') + sumCol('feed', 'total') + sumCol('gas', 'total') + sumCol('bedding', 'total') + sumCol('vet', 'total') + sumCol('other', 'total'); let netProfit = income - expenses;
+            let summaryData = [ ["تقرير مزرعة:", cycleObj.name], ["تاريخ البدء:", db.startDate || "غير محدد"], [""], ["البيان", "المبلغ (د.ج)"], ["إجمالي المبيعات", income], ["إجمالي المصاريف", expenses], ["الصافي (الأرباح/الخسائر)", netProfit] ];
+            let summaryWs = XLSX.utils.aoa_to_sheet(summaryData); if(!summaryWs['!views']) summaryWs['!views'] = []; summaryWs['!views'].push({ rightToLeft: true }); XLSX.utils.book_append_sheet(wb, summaryWs, "ملخص الدورة");
+            addSheet('chicks', 'شراء الكتاكيت'); addSheet('feed', 'استهلاك العلف'); addSheet('mortality', 'الوفيات'); addSheet('vet', 'أدوية وبيطري'); addSheet('gas', 'غاز وتدفئة'); addSheet('bedding', 'نشارة وفراش'); addSheet('other', 'مصاريف أخرى'); addSheet('sales', 'المبيعات');
+            XLSX.writeFile(wb, `تقرير_مزرعة_${cycleObj.name}.xlsx`);
         }
 
         function sumCol(category, col) { return db[category].reduce((sum, record) => sum + (parseFloat(record[col]) || 0), 0); }
         function saveAppState() { if (appState.currentCycleId && db) { let idx = appState.activeCycles.findIndex(c => c.id == appState.currentCycleId); if (idx !== -1) appState.activeCycles[idx].data = db; } localStorage.setItem('poultryAppV12', JSON.stringify(appState)); }
 
+        /* تعديل دالة الأرشفة لحفظ نسخة كاملة من البيانات بدلاً من النتيجة فقط */
         function archiveCurrentCycle() {
-            openModal('حفظ في الأرشيف', 'سيتم إنهاء وحفظ هذه الدورة.', false, 'نعم، أرشفة', function() {
+            openModal('حفظ في الأرشيف', 'سيتم إنهاء وحفظ هذه الدورة بكل تفاصيلها.', false, 'نعم، أرشفة', function() {
                 let income = sumCol('sales', 'total'), expenses = sumCol('chicks', 'total') + sumCol('feed', 'total') + sumCol('gas', 'total') + sumCol('bedding', 'total') + sumCol('vet', 'total') + sumCol('other', 'total');
                 let feedKg = sumCol('feed', 'qty') * 100, meatKg = sumCol('sales', 'qty'); let cycleObj = appState.activeCycles.find(c => c.id == appState.currentCycleId);
-                appState.archivedCycles.push({ id: cycleObj.id, name: cycleObj.name, date: db.startDate || 'بدون تاريخ', netProfit: income - expenses, fcr: meatKg > 0 ? (feedKg / meatKg).toFixed(2) : '-' });
-                appState.activeCycles = appState.activeCycles.filter(c => c.id != appState.currentCycleId); appState.currentCycleId = null; db = null; saveAppState(); showMainList(); showToast('تم حفظ الدورة في الأرشيف.');
+                // نسخ كامل البيانات وحفظها
+                appState.archivedCycles.push({ id: cycleObj.id, name: cycleObj.name, date: db.startDate || 'بدون تاريخ', netProfit: income - expenses, fcr: meatKg > 0 ? (feedKg / meatKg).toFixed(2) : '-', data: JSON.parse(JSON.stringify(db)) });
+                appState.activeCycles = appState.activeCycles.filter(c => c.id != appState.currentCycleId); appState.currentCycleId = null; db = null; saveAppState(); showMainList();
             });
         }
 
@@ -719,26 +515,48 @@
             if(appState.archivedCycles.length === 0) { list.innerHTML = '<p style="text-align:center; color:var(--text-gray); font-size:13px;">لا توجد دورات محفوظة.</p>'; return; }
             [...appState.archivedCycles].reverse().forEach(cycle => {
                 let isProfit = cycle.netProfit >= 0; let statusColor = isProfit ? 'var(--success)' : 'var(--danger)';
-                list.innerHTML += `<div class="res-box" style="flex-direction: column; align-items: stretch; border-right: 4px solid ${statusColor}; padding:10px;"><div style="display:flex; justify-content: space-between; margin-bottom: 4px;"><h3 style="color:var(--text-main); font-size:13px; margin:0;">${cycle.name}</h3><span style="color:var(--text-gray); font-size: 10px;">${cycle.date}</span></div><div style="display:flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 6px; margin-top:4px;"><span style="font-size:12px; color:var(--text-main);">الصافي: <strong style="color:${statusColor};">${cycle.netProfit.toLocaleString()}</strong></span><span style="font-size:12px; color:var(--text-main);">FCR: <strong style="color:var(--info);">${cycle.fcr}</strong></span></div><button onclick="deleteArchive(${cycle.id})" class="btn" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); padding: 6px; margin-top: 8px; font-size:11px; border:1px solid var(--danger);">حذف نهائي</button></div>`;
+                // إضافة دالة فتح التفاصيل عند الضغط على الكارت
+                list.innerHTML += `<div class="res-box" onclick="openArchivedDetails(${cycle.id})" style="cursor: pointer; flex-direction: column; align-items: stretch; border-right: 4px solid ${statusColor}; padding:10px;"><div style="display:flex; justify-content: space-between; margin-bottom: 4px;"><h3 style="color:var(--text-main); font-size:13px; margin:0;">${cycle.name}</h3><span style="color:var(--text-gray); font-size: 10px;">${cycle.date}</span></div><div style="display:flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 6px; margin-top:4px;"><span style="font-size:12px; color:var(--text-main);">الصافي: <strong style="color:${statusColor};">${cycle.netProfit.toLocaleString()}</strong></span><span style="font-size:12px; color:var(--text-main);">FCR: <strong style="color:var(--info);">${cycle.fcr}</strong></span></div><button onclick="event.stopPropagation(); deleteArchive(${cycle.id})" class="btn" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); padding: 6px; margin-top: 8px; font-size:11px; border:1px solid var(--danger);">حذف نهائي</button></div>`;
             });
         }
-        function deleteArchive(id) { openModal('حذف', 'سيتم الحذف نهائياً.', false, 'نعم، احذف', function() { appState.archivedCycles = appState.archivedCycles.filter(c => c.id !== id); saveAppState(); renderArchiveList(); showToast('تم حذف الدورة المؤرشفة.'); }); }
         
-        function openModal(title, msg, showInput, yesText, onYesCallback, isTextarea = false) {
-            document.getElementById('modal-title').innerText = title; document.getElementById('modal-msg').innerText = msg;
-            let inputEl = document.getElementById('modal-input');
-            let textareaEl = document.getElementById('modal-textarea');
-            let yesBtn = document.getElementById('modal-btn-yes');
+        function deleteArchive(id) { openModal('حذف', 'سيتم الحذف نهائياً.', false, 'نعم، احذف', function() { appState.archivedCycles = appState.archivedCycles.filter(c => c.id !== id); saveAppState(); renderArchiveList(); }); }
+        
+        /* دالة لفتح وعرض تفاصيل الأرشيف في صفحة جديدة */
+        function openArchivedDetails(id) {
+            let cycle = appState.archivedCycles.find(c => c.id === id);
+            if(!cycle || !cycle.data) { openModal('تنبيه', 'تفاصيل هذه الدورة غير متوفرة (تم حفظها بالطريقة القديمة).', false, 'حسناً', null); return; }
             
-            inputEl.style.display = 'none'; textareaEl.style.display = 'none';
-            if(showInput) { inputEl.style.display = 'block'; inputEl.value = ''; inputEl.style.borderColor = 'var(--border)'; }
-            if(isTextarea) { textareaEl.style.display = 'block'; textareaEl.style.borderColor = 'var(--border)'; }
+            let html = `<div class="cycle-header"><h2 style="color:var(--primary); margin:0; font-size:18px;">${cycle.name}</h2><p style="color:var(--text-gray); margin:5px 0 0; font-size:12px;">تاريخ البدء: ${cycle.date}</p></div>`;
+            
+            // حلقة لعرض كل الجداول
+            let cats = [
+                { id: 'chicks', title: 'شراء الكتاكيت' }, { id: 'feed', title: 'استهلاك العلف' },
+                { id: 'mortality', title: 'الوفيات' }, { id: 'vet', title: 'أدوية وبيطري' },
+                { id: 'gas', title: 'تدفئة وغاز' }, { id: 'bedding', title: 'نشارة وفراش' },
+                { id: 'other', title: 'مصاريف أخرى' }, { id: 'sales', title: 'المبيعات' }
+            ];
 
+            cats.forEach(cat => {
+                let dataList = cycle.data[cat.id];
+                if(dataList && dataList.length > 0) {
+                    html += `<h3 style="color:var(--info); font-size:14px; border-bottom:1px solid var(--border); padding-bottom:5px; margin-top:20px;">${cat.title}</h3>`;
+                    html += `<div class="table-container"><table><thead><tr><th>التاريخ</th><th>البيان</th><th>الكمية</th><th>المجموع</th></tr></thead><tbody>`;
+                    dataList.forEach(r => { html += `<tr><td>${r.date.substring(5)}</td><td>${r.name}</td><td>${r.qty}</td><td>${r.total}</td></tr>`; });
+                    html += `</tbody></table></div>`;
+                }
+            });
+
+            document.getElementById('archive-details-content').innerHTML = html;
+            navigateToPage('archive-details-page');
+        }
+
+        function openModal(title, msg, showInput, yesText, onYesCallback) {
+            document.getElementById('modal-title').innerText = title; document.getElementById('modal-msg').innerText = msg;
+            let inputEl = document.getElementById('modal-input'), yesBtn = document.getElementById('modal-btn-yes');
+            if(showInput) { inputEl.style.display = 'block'; inputEl.value = ''; inputEl.style.borderColor = 'var(--border)';} else { inputEl.style.display = 'none'; }
             yesBtn.innerText = yesText; yesBtn.style.backgroundColor = yesText.includes('احذف') ? 'var(--danger)' : 'var(--primary)';
-            yesBtn.onclick = function() { 
-                if(showInput && !inputEl.value.trim()) { inputEl.style.borderColor = 'var(--danger)'; return;} 
-                closeModal(); if(onYesCallback) onYesCallback(showInput ? inputEl.value : null); 
-            };
+            yesBtn.onclick = function() { if(showInput && !inputEl.value.trim()) { inputEl.style.borderColor = 'var(--danger)'; return;} closeModal(); if(onYesCallback) onYesCallback(inputEl.value); };
             document.getElementById('custom-modal').style.display = 'flex';
         }
         function closeModal() { document.getElementById('custom-modal').style.display = 'none'; }
